@@ -1,0 +1,45 @@
+<html>
+<head>
+
+</head>
+
+<body>
+<canvas id="gl-canvas" width="512" height="512">
+    Oops ... your browser doesn't support the HTML5 canvas element
+</canvas>
+
+<br/>
+
+<script type="text/javascript" src="./Common/initShaders2.js"></script>
+<script type="text/javascript" src="./Common/MVnew.js"></script>
+<script type="text/javascript" src="./spheredata.js"></script>      <!-- Kode fra bok: WebGL2.0/GEOMETRY/sphereData.js -->
+<script type="text/javascript" src="./cylinderdata.js"></script>    <!-- Kode fra bok: WebGL2.0/GEOMETRY/cylinderData.js -->
+
+
+<script type="text/javascript" src="oppg2b.js"></script>
+
+
+<button id = "ButtonX">Rotate X</button>
+<button id = "ButtonY">Rotate Y</button>
+<button id = "ButtonZ">Rotate Z</button>
+<button id = "ButtonT">Toggle Rotation</button>
+
+<div>
+    Light x: -5 <input id="slider1" type="range" min="-5" max="5" step="0.5" value="1" oninput="updateLightX(this.value)"> 5
+</div>
+
+<div>
+    Light y: -5 <input id="slider2" type="range" min="-5" max="5" step="0.5" value="1" oninput="updateLightY(this.value)"> 5
+</div>
+
+<div>
+    Light z: -5 <input id="slider3" type="range" min="-5" max="5" step="0.5" value="1" oninput="updateLightZ(this.value)"> 5
+</div>
+
+
+
+
+
+
+</body>
+</html>
