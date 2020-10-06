@@ -88,31 +88,20 @@ var theta = vec3(45.0, 45.0, 45.0);
 
 var thetaLoc;
 
-let renderer = new Renderer(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-function configureTexture() {
-    texture1 =  gl.createTexture();
 
 
-    gl.bindTexture(gl.TEXTURE_2D, texture1);
-
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texSize, texSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, image1);
+function configureTexture( image ) {
+    let texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB,
+        gl.RGB, gl.UNSIGNED_BYTE, image);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
-                      gl.NEAREST_MIPMAP_LINEAR);
+        gl.NEAREST_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-
-
-    texture2 = gl.createTexture();
-
-        gl.bindTexture(gl.TEXTURE_2D, texture2);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texSize, texSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, image2);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
-                          gl.NEAREST_MIPMAP_LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.uniform1i(gl.getUniformLocation(program, "uTexMap"), 0);
+    return texture;
 }
 
 function quad(a, b, c, d) {
@@ -164,6 +153,9 @@ window.onload = function init() {
 
     gl.enable(gl.DEPTH_TEST);
 
+
+
+
     //
     //  Load shaders and initialize attribute buffers
     //
@@ -199,7 +191,16 @@ window.onload = function init() {
 
 
 
-    configureTexture();
+
+    let image1 = document.getElementById("shrek");
+
+    gl.activeTexture(gl.TEXTURE0);
+
+
+    texture1 =  configureTexture(image1);
+    let image2 = document.getElementById("sun");
+
+    texture2 = configureTexture(image2);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture1);
