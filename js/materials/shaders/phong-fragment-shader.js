@@ -70,13 +70,13 @@ void main() {
         vec3 viewDirection = normalize(-position);
 
         // Given lightDirection and normal you should be able to calulate diffuse.
-        float lambertian = dot(normal, lightDirection); // TODO: implement diffuse term.
+        float lambertian = max(dot(normal, lightDirection),0.0); // TODO: implement diffuse term.
 
         float specular = 0.0;
         if (lambertian > 0.0) {
             // Using reflectDirection and viewDirection we can calculate the specular angle.
             
-            float specAngle = clamp(dot(reflectDirection,-viewDirection),0.0,1.0);
+            float specAngle = max(dot(reflectDirection, viewDirection),0.0);
             //acos((dot(reflectDirection, -viewDirection))/((length(reflectDirection))*(length(-viewDirection)))); // TODO: implement specular term.
             specular = pow(specAngle, shininess);
         }
