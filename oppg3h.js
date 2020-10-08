@@ -1,33 +1,50 @@
 "use strict";
+import { Renderer } from './lib/engine';
 
 var canvas;
 var gl;
 
 var numPositions  = 36;
 
-var texSize = 64;
+var texSize = 256;
+var numChecks = 8;
 
-// Create a checkerboard pattern using floats
+var program;
 
+var texture1, texture2;
+var t1, t2;
 
-var image1 = new Array()
-    for (var i =0; i<texSize; i++)  image1[i] = new Array();
-    for (var i =0; i<texSize; i++)
-        for ( var j = 0; j < texSize; j++)
-           image1[i][j] = new Float32Array(4);
-    for (var i =0; i<texSize; i++) for (var j=0; j<texSize; j++) {
-        var c = (((i & 0x8) == 0) ^ ((j & 0x8)  == 0));
-        image1[i][j] = [c, c, c, 1];
+var c;
+
+var flag = true;
+
+var image1 = new Uint8Array(4*texSize*texSize);
+
+    for ( var i = 0; i < texSize; i++ ) {
+        for ( var j = 0; j <texSize; j++ ) {
+            var patchx = Math.floor(i/(texSize/numChecks));
+            var patchy = Math.floor(j/(texSize/numChecks));
+            if(patchx%2 ^ patchy%2) c = 255;
+            else c = 0;
+            //c = 255*(((i & 0x8) == 0) ^ ((j & 0x8)  == 0))
+            image1[4*i*texSize+4*j] = c;
+            image1[4*i*texSize+4*j+1] = c;
+            image1[4*i*texSize+4*j+2] = c;
+            image1[4*i*texSize+4*j+3] = 255;
+        }
     }
-
-// Convert floats to ubytes for texture
 
 var image2 = new Uint8Array(4*texSize*texSize);
 
-    for (var i = 0; i < texSize; i++)
-        for (var j = 0; j < texSize; j++)
-           for(var k =0; k<4; k++)
-                image2[4*texSize*i+4*j+k] = 255*image1[i][j][k];
+    // Create a checkerboard pattern
+    for (var i = 0; i < texSize; i++) {
+        for (var j = 0; j <texSize; j++) {
+            image2[4*i*texSize+4*j] = 127+127*Math.sin(0.1*i*j);
+            image2[4*i*texSize+4*j+1] = 127+127*Math.sin(0.1*i*j);
+            image2[4*i*texSize+4*j+2] = 127+127*Math.sin(0.1*i*j);
+            image2[4*i*texSize+4*j+3] = 255;
+           }
+    }
 
 var positionsArray = [];
 var colorsArray = [];
@@ -40,7 +57,6 @@ var texCoord = [
     vec2(1, 0)
 ];
 
-
 var vertices = [
     vec4(-0.5, -0.5, 0.5, 1.0),
     vec4(-0.5, 0.5, 0.5, 1.0),
@@ -52,7 +68,6 @@ var vertices = [
     vec4(0.5, -0.5, -0.5, 1.0)
 ];
 
-
 var vertexColors = [
     vec4(0.0, 0.0, 0.0, 1.0),  // black
     vec4(1.0, 0.0, 0.0, 1.0),  // red
@@ -63,8 +78,6 @@ var vertexColors = [
     vec4(0.0, 1.0, 1.0, 1.0),  // white
     vec4(0.0, 1.0, 1.0, 1.0)   // cyan
 ];
-window.onload = init;
-
 
 var xAxis = 0;
 var yAxis = 1;
@@ -75,20 +88,23 @@ var theta = vec3(45.0, 45.0, 45.0);
 
 var thetaLoc;
 
-function configureTexture(image) {
-    var texture = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE0);
+
+
+function configureTexture( image ) {
+    let texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texSize, texSize, 0,
-        gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB,
+        gl.RGB, gl.UNSIGNED_BYTE, image);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
         gl.NEAREST_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    gl.uniform1i(gl.getUniformLocation(program, "uTexMap"), 0);
+    return texture;
 }
 
 function quad(a, b, c, d) {
-
      positionsArray.push(vertices[a]);
      colorsArray.push(vertexColors[a]);
      texCoordsArray.push(texCoord[0]);
@@ -114,7 +130,6 @@ function quad(a, b, c, d) {
      texCoordsArray.push(texCoord[3]);
 }
 
-
 function colorCube()
 {
     quad(1, 0, 3, 2);
@@ -126,7 +141,8 @@ function colorCube()
 }
 
 
-function init() {
+window.onload = function init() {
+
     canvas = document.getElementById("gl-canvas");
 
     gl = canvas.getContext('webgl2');
@@ -137,51 +153,77 @@ function init() {
 
     gl.enable(gl.DEPTH_TEST);
 
+
+
+
     //
     //  Load shaders and initialize attribute buffers
     //
-    var program = initShaders(gl, "vertex-shader", "fragment-shader");
+    program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
     colorCube();
 
     var cBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-    gl.bufferData( gl.ARRAY_BUFFER, flatten(colorsArray), gl.STATIC_DRAW );
-    var colorLoc = gl.getAttribLocation(program, "aColor");
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(colorsArray), gl.STATIC_DRAW);
+
+    var colorLoc = gl.getAttribLocation( program, "aColor");
     gl.vertexAttribPointer(colorLoc, 4, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(colorLoc);
 
     var vBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(positionsArray), gl.STATIC_DRAW);
+
     var positionLoc = gl.getAttribLocation( program, "aPosition");
     gl.vertexAttribPointer(positionLoc, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(positionLoc);
+    gl.enableVertexAttribArray(positionLoc );
 
     var tBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, tBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(texCoordsArray), gl.STATIC_DRAW);
-    var texCoordLoc = gl.getAttribLocation( program, "aTexCoord");
+
+    var texCoordLoc = gl.getAttribLocation(program, "aTexCoord");
     gl.vertexAttribPointer(texCoordLoc, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(texCoordLoc);
 
-    configureTexture(image2);
 
-    gl.uniform1i( gl.getUniformLocation(program, "uTextureMap"), 0);
+
+
+
+    let image1 = document.getElementById("shrek");
+
+    gl.activeTexture(gl.TEXTURE0);
+
+
+    texture1 =  configureTexture(image1);
+    let image2 = document.getElementById("sun");
+
+    texture2 = configureTexture(image2);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture1);
+    gl.uniform1i(gl.getUniformLocation( program, "uTex0"), 0);
+
+    gl.activeTexture(gl.TEXTURE1 );
+    gl.bindTexture(gl.TEXTURE_2D, texture2);
+    gl.uniform1i(gl.getUniformLocation( program, "uTex1"), 1);
 
     thetaLoc = gl.getUniformLocation(program, "uTheta");
 
-    document.getElementById("ButtonX").onclick = function(){axis = xAxis;};
-    document.getElementById("ButtonY").onclick = function(){axis = yAxis;};
-    document.getElementById("ButtonZ").onclick = function(){axis = zAxis;};
+
+ document.getElementById("ButtonX").onclick = function(){axis = xAxis;};
+ document.getElementById("ButtonY").onclick = function(){axis = yAxis;};
+ document.getElementById("ButtonZ").onclick = function(){axis = zAxis;};
+ document.getElementById("ButtonT").onclick = function(){flag = !flag;};
 
     render();
 }
 
 var render = function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    theta[axis] += 2.0;
+    if(flag) theta[axis] += 2.0;
     gl.uniform3fv(thetaLoc, theta);
     gl.drawArrays(gl.TRIANGLES, 0, numPositions);
     requestAnimationFrame(render);
